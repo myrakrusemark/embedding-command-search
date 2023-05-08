@@ -30,47 +30,65 @@ def embed_strings(strings):
     return embedding.tolist() # convert ndarray to list
 
 
-# Accept inputs from the user
+# Main prompt loop
 while True:
-    tool_name = input("Enter a tool name (or 'quit' to exit): ")
-    if tool_name == 'quit':
-        break
-    if tool_name in embeddings:
-        print("Tool already exists in embeddings. Adding new examples.")
-        examples = embeddings[tool_name]['examples']
-    else:
-        examples = []
-    while True:
-        example = input("Enter an example search term (or 'done' to finish): ")
-        if example == 'done':
-            break
-        example_embedding = embed_strings([example])
-        if example_embedding is not None:
-            examples.append({'text': example, 'embedding': example_embedding})
-        else:
-            print("Skipping invalid embedding for example:", example)
-    if examples:
+    command = input("Enter a command (add, list, save, quit): ")
+    if command == 'add':
+        tool_name = input("Enter a tool name: ")
         if tool_name in embeddings:
-            embeddings[tool_name]['examples'].extend(examples)
+            print("Tool already exists in embeddings. Adding new examples.")
+            examples = embeddings[tool_name]['examples']
         else:
-            embeddings[tool_name] = {
-                'tool': {'text': tool_name},
-                'examples': examples
-            }
+            examples = []
+        while True:
+            example = input("Enter an example search term (or 'done' to finish): ")
+            if example == 'done':
+                break
+            example_embedding = embed_strings([example])
+            if example_embedding is not None:
+                examples.append({'text': example, 'embedding': example_embedding})
+            else:
+                print("Skipping invalid embedding for example:", example)
+        if examples:
+            if tool_name in embeddings:
+                embeddings[tool_name]['examples'].extend(examples)
+            else:
+                embeddings[tool_name] = {
+                    'tool': {'text': tool_name},
+                    'examples': examples
+                }
+        else:
+            print("Skipping tool with no valid example embeddings:", tool_name)
+
+    elif command == 'list':
+        for tool in embeddings.values():
+            print(tool['tool']['text'])
+            for example in tool['examples']:
+                print(f"  {example['text']}")
+
+    elif command == 'save':
+        with open('embeddings.json', 'w') as f:
+            # Convert the embeddings to lists before outputting
+            embeddings_copy = embeddings.copy()
+            for tool in embeddings_copy.values():
+                for example in tool['examples']:
+                    example_embedding = example['embedding']
+                    example['embedding'] = example_embedding if example_embedding is not None else None
+            json.dump(embeddings_copy, f, indent=4)
+        print("Embeddings saved to file.")
+
+    elif command == 'quit':
+        save_response = input("Do you want to save your changes before exiting? (y/n) ")
+        if save_response.lower() == 'y':
+            with open('embeddings.json', 'w') as f:
+                # Convert the embeddings to lists before outputting
+                embeddings_copy = embeddings.copy()
+                for tool in embeddings_copy.values():
+                    for example in tool['examples']:
+                        example_embedding = example['embedding']
+                        example['embedding'] = example_embedding if example_embedding is not None else None
+                json.dump(embeddings_copy, f, indent=4)
+            print("Embeddings saved to file.")
+        break
     else:
-        print("Skipping tool with no valid example embeddings:", tool_name)
-
-
-# Output the embeddings to a JSON file
-with open('embeddings.json', 'w') as f:
-    # Convert the embeddings to lists before outputting
-    embeddings_copy = embeddings.copy()
-    for tool in embeddings_copy.values():
-        for example in tool['examples']:
-            example_embedding = example['embedding']
-            example['embedding'] = example_embedding if example_embedding is not None else None
-    json.dump(embeddings_copy, f, indent=4)
-    
-# Print the contents of the JSON file
-with open('embeddings.json', 'r') as f:
-    print(f.read())
+        print("Invalid command. Please try again.")
