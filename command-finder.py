@@ -63,7 +63,7 @@ while True:
         print(f"Command: {command}, Match: {command_match:.2f}%")
 
     # Output the best command for achieving the goal
-    print("Goal:", goal)
+    print("Task:", goal)
 
     if not np.isnan(best_command_distance):
         best_command_match = 100 * (1 - best_command_distance)
