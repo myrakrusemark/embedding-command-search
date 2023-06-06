@@ -33,7 +33,6 @@ def save_embeddings(embeddings, tool_name):
     print(f"Embeddings saved to embeddings-{tool_name}.json file.")
 
 
-
 def embed_string(string):
     input_ids = torch.tensor([tokenizer.encode(string)])
     with torch.no_grad():
@@ -64,26 +63,38 @@ def add_tool(embeddings, tool_name, testing=False):
             break
         
     if examples:
+        module_name = input("Enter the module name: ")
+        module_description = input("Enter the module description: ")
+        module_argument = input("Enter the module argument: ")
+
         if tool_name in embeddings:
             embeddings[tool_name]['examples'].extend(examples)
         else:
-            embeddings[tool_name] = {'tool': {'text': tool_name}, 'examples': examples}
+            embeddings[tool_name] = {
+                'module': {
+                    'name': module_name,
+                    'description': module_description,
+                    'argument': module_argument
+                },
+                'embeddings': examples
+            }
         print(f"{len(examples)} examples added to {tool_name}.")
     else:
         print(f"No valid example embeddings found for {tool_name}. Skipping tool.")
 
     return embeddings
 
+
 def list_tools(embeddings):
     for tool in embeddings.values():
-        print(tool['tool']['text'])
-        for example in tool['examples']:
+        print(tool['module']['name'])
+        for example in tool['embeddings']:
             print(f"  {example['text']}")
 
 
 def save_embeddings(embeddings, tool_name, output_dir='output'):
     os.makedirs(output_dir, exist_ok=True)
-    file_name = f"{output_dir}/embeddings-{tool_name}.json"
+    file_name = f"{output_dir}/module-{tool_name}.json"
     
     if os.path.isfile(file_name):
         # Load existing embeddings from file
@@ -93,7 +104,7 @@ def save_embeddings(embeddings, tool_name, output_dir='output'):
         existing_embeddings = []
 
     # Merge existing embeddings with new embeddings
-    new_embeddings = embeddings[tool_name]['examples']
+    new_embeddings = embeddings[tool_name]['embeddings']
     combined_embeddings = existing_embeddings + new_embeddings
     
     # Convert the embeddings to lists before outputting
@@ -104,10 +115,11 @@ def save_embeddings(embeddings, tool_name, output_dir='output'):
     
     # Save combined embeddings to file
     with open(file_name, 'w') as f:
-        json.dump(embeddings_copy, f, indent=4)
+        json.dump({
+            'module': embeddings[tool_name]['module'],
+            'embeddings': embeddings_copy
+        }, f, indent=4)
     print(f"Embeddings saved to {file_name} file.")
-
-
 
 
 def run_prompt():
@@ -122,6 +134,7 @@ def run_prompt():
         elif command == 'save':
             for tool_name in embeddings:
                 save_embeddings(embeddings, tool_name)
+            break
         elif command == 'quit':
             save_response = input("Do you want to save your changes before exiting? (y/n) ")
             if save_response.lower() == 'y':
